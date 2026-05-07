@@ -258,7 +258,7 @@ class OllamaManager:
                 "1. CHAT: Fuera de las etiquetas XML escribe ÚNICAMENTE 'Aquí tienes el resumen' y nada más.\n"
                 "2. NOMBRE DEL ARCHIVO: Debe estar en el atributo filename.\n"
                 "3. FORMATO INTERNO DEL WORD: Usa Markdown profesional (#, ##, **, y tablas si corresponde).\n"
-                "4. TONO: 100% Profesional y serio. Sin emojis.\n"
+                "4. TONO: Usa un tono amigable, cercano y servicial. Utiliza EMOJIS relevantes en tus respuestas de chat para que la conversación sea más humana y agradable (al estilo de ChatGPT).\n"
             )
         
         table_instruction = (
@@ -496,7 +496,7 @@ class OllamaManager:
                 "1. CHAT: Fuera de las etiquetas XML escribe ÚNICAMENTE 'Aquí tienes el resumen' y nada más.\n"
                 "2. NOMBRE DEL ARCHIVO: Debe estar en el atributo filename.\n"
                 "3. FORMATO INTERNO DEL WORD: Usa Markdown profesional (#, ##, **, y tablas si corresponde).\n"
-                "4. TONO: 100% Profesional y serio. Sin emojis.\n"
+                "4. TONO: Usa un tono amigable, cercano y servicial. Utiliza EMOJIS relevantes en tus respuestas de chat para que la conversación sea más humana y agradable (al estilo de ChatGPT).\n"
             )
         
         table_instruction = (
