@@ -1136,40 +1136,61 @@ body {
 }
 
 /* ── Créditos ────────────────────────── */
-.btn-credits {
-    margin-top: 12px;
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--accent-primary);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    padding: 0.6rem 1rem;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 100%;
+.credits-tag {
+    margin-top: 15px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
 }
 
-.btn-credits:hover {
-    background: var(--accent-primary);
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+.credits-tag:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+}
+
+.credits-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    letter-spacing: 0.05em;
+}
+
+.credits-divider {
+    color: rgba(255, 255, 255, 0.15);
+    font-size: 0.8rem;
+}
+
+.credits-author {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.credits-tag:hover .credits-author {
+    color: var(--text-primary);
 }
 
 .credits-content {
     text-align: center;
     padding: 2.5rem !important;
     max-width: 400px !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.15) !important;
 }
 
 .credits-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.4));
 }
 
 .credits-text {
