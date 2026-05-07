@@ -945,3 +945,12 @@ function formatResponse(text) {
 async function refreshModels() {
     await loadModels();
 }
+
+// ── Gestión de Créditos ──────────────────────────
+function openCredits() {
+    document.getElementById('credits-modal').style.display = 'flex';
+}
+
+function closeCredits() {
+    document.getElementById('credits-modal').style.display = 'none';
+}

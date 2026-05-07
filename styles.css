@@ -1133,4 +1133,54 @@ body {
 
 .md-table tr:hover td {
     background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Créditos ────────────────────────── */
+.btn-credits {
+    margin-top: 12px;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-credits:hover {
+    background: var(--accent-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.credits-content {
+    text-align: center;
+    padding: 2.5rem !important;
+    max-width: 400px !important;
+}
+
+.credits-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.credits-text {
+    margin-top: 1.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.credits-rights {
+    margin-top: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
 }
