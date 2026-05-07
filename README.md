@@ -1,119 +1,86 @@
-# Chatbot con Ollama
+# Nexus AI Local Agent 🤖🧠
 
-Un chatbot moderno y minimalista que utiliza modelos locales de Ollama.
+Nexus AI es un asistente inteligente autónomo de vanguardia diseñado para ejecutarse **100% en local** en tu ordenador utilizando modelos de Ollama. No es un simple chatbot: es un Agente capaz de usar herramientas, interactuar con tu sistema de archivos, buscar en internet y aprender de ti, todo bajo un entorno de privacidad absoluta.
 
-## Características
+![Licencia](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
-- 🎨 Interfaz moderna y minimalista con diseño oscuro
-- 🤖 Soporte para múltiples modelos de Ollama
-- 💬 Chat en tiempo real con streaming
-- ⚙️ Personalización con prompts del sistema
-- 📱 Diseño responsivo para móviles y escritorio
+---
 
-## Requisitos
+## ✨ Características Principales
 
-- Python 3.8 o superior
-- Ollama instalado y corriendo (http://localhost:11434)
-- Al menos un modelo de Ollama instalado (ej: llama2, mistral, etc.)
+Tu Agente cuenta con una "Caja de Herramientas" (Toolbox) modular que puedes activar o desactivar en cualquier momento desde los Ajustes de la interfaz web:
 
-## Instalación
+- 🧠 **Memoria a Largo Plazo Persistente:** El agente recuerda tu nombre, profesión, gustos y preferencias de sesiones anteriores gracias a una base de datos SQLite integrada (`user_profile.db`). ¡Tu IA evoluciona y se adapta a ti con el tiempo!
+- 💻 **Automatizador Local (Intérprete de Código Python):** Nexus puede escribir y ejecutar scripts de Python silenciosamente en tu ordenador para organizar tus carpetas, convertir archivos, hacer cálculos masivos y auto-instalarse librerías (como `Pillow` o `pandas`) si lo necesita.
+- 🌐 **Búsqueda Web en Tiempo Real:** Si le haces una pregunta sobre un evento actual que el modelo desconoce, el agente rastrea internet, lee las páginas web y te hace un resumen estructurado.
+- 🎬 **Gestor de YouTube Integrado:** Proporciónale una URL de YouTube y te descargará el vídeo (mp4) o el audio (mp3) usando `yt-dlp` en calidad óptima, guardándolo en tu carpeta local.
+- 📄 **Generador de Documentos Word:** Pídele que te redacte un informe formal y el agente creará mágicamente un archivo `.docx` formateado profesionalmente y te dará un enlace directo para descargarlo o abrirlo.
+- 🗣️ **Interfaz de Streaming y Markdown:** Diseño Glassmorphism premium. Disfruta de respuestas fluidas en tiempo real, renderizado de tablas, fragmentos de código con sintaxis resaltada y modo oscuro.
 
-### 1. Instalar Ollama
+---
 
-Descarga e instala Ollama desde: https://ollama.ai
+## 🚀 Requisitos Previos
 
-### 2. Descargar un modelo
+- Python 3.8 o superior.
+- [Ollama](https://ollama.ai/) instalado y en ejecución en tu ordenador (`http://localhost:11434`).
+- FFmpeg (opcional, pero fuertemente recomendado para que funcione correctamente la descarga de audios de YouTube).
 
-Ejecuta en tu terminal:
+---
 
-```bash
-ollama pull llama2
+## 🛠️ Instalación y Uso
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone https://github.com/TU_USUARIO/nexus-ai-agent.git
+   cd nexus-ai-agent
+   ```
+
+2. **Iniciar el Servidor Mágico**
+   Haz doble clic en el archivo `start.bat` o ejecútalo en la terminal:
+   ```bash
+   start.bat
+   ```
+   > Este script creará automáticamente el entorno virtual (`venv`), instalará todos los paquetes de `requirements.txt` e iniciará tanto el servidor API (FastAPI) como el servidor de interfaz web de inmediato.
+
+3. **Acceder al Chat**
+   Abre tu navegador web favorito y entra en:
+   ```text
+   http://127.0.0.1:3000
+   ```
+
+4. **Descargar un Modelo de Ollama (Si es la primera vez)**
+   Si no tienes ningún modelo descargado en Ollama, la interfaz te avisará. Simplemente abre tu terminal y ejecuta:
+   ```bash
+   ollama run llama3
+   ```
+
+---
+
+## 📂 Estructura del Proyecto
+
+```text
+nexus-ai-agent/
+├── main.py              # Backend FastAPI (Gestión de Endpoints)
+├── models.py            # Motor de IA: Inyección de Prompts y Lógica de Herramientas
+├── tools.py             # Herramientas físicas (YouTube, Web, DB, Python Exec)
+├── user_profile.db      # Base de Datos SQLite (Memoria del Usuario)
+├── config.py            # Puertos y variables de entorno
+├── requirements.txt     # Dependencias del proyecto
+├── start.bat            # Instalador y Lanzador Automático
+├── index.html           # Interfaz Gráfica (Frontend HTML)
+├── styles.css           # Diseño Premium Glassmorphic
+├── app.js               # Lógica del cliente y renderizado en streaming
+└── web/                 # Landing Page promocional del Agente
 ```
 
-O puedes probar con otros modelos como:
-- `mistral`
-- `gemma`
-- `codellama`
-- `llama3`
+---
 
-### 3. Iniciar el proyecto
+## 🔒 Privacidad y Seguridad
 
-Ejecuta el script de inicio:
+Este proyecto fue concebido bajo el principio de **Soberanía de Datos**. Nada de lo que hables, preguntes o subas a Nexus AI sale de tu ordenador. Todo el procesamiento de los modelos de Lenguaje y las acciones sobre el sistema de archivos ocurren única y exclusivamente en tu procesador/tarjeta gráfica local. 
 
-```bash
-start.bat
-```
+---
 
-Esto creará automáticamente el entorno virtual e instalará todas las dependencias necesarias.
+## 📜 Licencia
 
-## Uso
-
-### Iniciar el servidor
-
-Después de ejecutar `start.bat`, inicia el servidor:
-
-```bash
-python main.py
-```
-
-El servidor se ejecutará en `http://127.0.0.1:8000`
-
-### Abrir la interfaz web
-
-Abre tu navegador y ve a:
-
-```
-http://127.0.0.1:3000
-```
-
-### Usar el chatbot
-
-1. **Selecciona un modelo** del menú desplegable en la barra lateral
-2. **Escribe tu mensaje** en el campo de entrada
-3. **Presiona Enter** o haz clic en el botón de enviar
-4. **Personaliza el comportamiento** usando el "Prompt del Sistema"
-
-## Estructura del Proyecto
-
-```
-boot/
-├── main.py              # API FastAPI
-├── models.py            # Manejo de Ollama
-├── config.py            # Configuración
-├── index.html           # Interfaz web
-├── styles.css           # Estilos
-├── app.js               # Lógica frontend
-├── requirements.txt     # Dependencias Python
-├── start.bat            # Script de inicio
-└── README.md            # Este archivo
-```
-
-## API Endpoints
-
-- `GET /` - Estado del servidor
-- `GET /api/models` - Listar modelos disponibles
-- `POST /api/chat` - Enviar mensaje al chatbot
-- `POST /api/model/switch` - Cambiar de modelo
-- `GET /api/model/info/{model_name}` - Información de un modelo
-
-## Personalización
-
-### Cambiar el puerto del servidor
-
-Edita `config.py`:
-
-```python
-PORT = 8000  # Cambia este valor
-```
-
-### Cambiar el puerto de la interfaz web
-
-Edita `config.py`:
-
-```python
-INTERFACE_PORT = 3000  # Cambia este valor
-```
-
-## Licencia
-
-Este proyecto es de código abierto.
+Este proyecto se distribuye bajo la licencia **Apache License 2.0**. Eres libre de utilizarlo, modificarlo y distribuirlo, tanto para fines personales como comerciales. Para más información, consulta el archivo `LICENSE` adjunto.
