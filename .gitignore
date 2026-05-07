@@ -1,0 +1,32 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bases de datos y memoria del usuario
+user_profile.db
+*.sqlite3
+*.db
+
+# Descargas generadas por el bot
+downloads/
+*.mp3
+*.mp4
+*.docx
+
+# Logs
+app.log
+*.log
+
+# Variables de entorno y configuraciones sensibles
+.env
+config.py
+
+# Archivos del sistema operativo (Mac/Windows)
+.DS_Store
+Thumbs.db
