@@ -1136,47 +1136,35 @@ body {
 }
 
 /* ── Créditos ────────────────────────── */
-.credits-tag {
+.btn-credits-premium {
     margin-top: 15px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    color: white;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-.credits-tag:hover {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
-    transform: translateY(-1px);
+.btn-credits-premium:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
+    filter: brightness(1.1);
 }
 
-.credits-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--accent-primary);
-    letter-spacing: 0.05em;
-}
-
-.credits-divider {
-    color: rgba(255, 255, 255, 0.15);
-    font-size: 0.8rem;
-}
-
-.credits-author {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.credits-tag:hover .credits-author {
-    color: var(--text-primary);
+.btn-credits-premium:active {
+    transform: translateY(0) scale(0.98);
 }
 
 .credits-content {
