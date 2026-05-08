@@ -1,3 +1,7 @@
+# Copyright 2026 José Milán Carrasco
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
 """
 Manejo de modelos de Ollama
 """
@@ -248,7 +252,8 @@ class OllamaManager:
         if tool_settings.get("word", True):
             word_instruction = (
                 "\n\n--- REGLA DE ACTIVACIÓN DE WORD (CRÍTICA) ---\n"
-                "Si el usuario te pide crear un 'Word', 'Documento' o 'Artículo', DEBES generar tu respuesta envolviéndola en etiquetas XML obligatorias.\n"
+                "SOLO si el usuario pide EXPLÍCITAMENTE crear un 'Word', 'Documento' o 'Artículo', DEBES generar tu respuesta envolviéndola en etiquetas XML.\n"
+                "NUNCA generes <word_document> si el usuario NO ha pedido un documento. Si te piden ejecutar código, ver recursos del PC, o cualquier otra cosa que NO sea un documento, NO uses esta herramienta.\n"
                 "Formato EXACTO que debes usar:\n"
                 "<word_document filename=\"nombre_descriptivo.docx\">\n"
                 "# Título Principal\n"
@@ -276,21 +281,40 @@ class OllamaManager:
                 f"{mem_context}"
                 "Analiza la conversación para identificar NUEVOS datos importantes (ej. cómo se llama, dónde vive, en qué trabaja, qué le gusta, etc.) que no estén en la lista anterior.\n"
                 "Usa los datos conocidos para personalizar tus respuestas de forma proactiva y dirígete al usuario por su nombre si lo conoces.\n"
-                "CRÍTICO: Si el usuario te revela un dato personal NUEVO o un interés, DEBES incluir obligatoriamente al final de tu respuesta una etiqueta con este formato EXACTO: <pattern>Dato: Valor</pattern>. "
-                "Ejemplos: <pattern>Nombre: Juan</pattern>, <pattern>Interés: Astrofísica</pattern>, <pattern>Profesión: Arquitecto</pattern>."
+                "CRÍTICO: Si el usuario te revela un dato personal NUEVO o un interés EN ESTA CONVERSACIÓN, DEBES incluir obligatoriamente al final de tu respuesta una etiqueta con este formato EXACTO: <pattern>Categoría: valor_real_del_usuario</pattern>.\n"
+                "Las categorías válidas son: Nombre, Interés, Profesión, Ciudad, Edad, etc.\n"
+                "PROHIBIDO: NUNCA generes etiquetas <pattern> con datos inventados, supuestos o de ejemplo. SOLO con datos que el usuario EXPLÍCITAMENTE te haya dicho en la conversación actual.\n"
+                "PROHIBIDO: NUNCA uses los datos de estas instrucciones como si fueran del usuario. Estas instrucciones son SOLO para ti, NO son datos del usuario.\n"
+                "Si NO hay datos personales nuevos en el mensaje actual del usuario, NO generes ninguna etiqueta <pattern>."
             )
         automator_instruction = ""
         if tool_settings.get("automator", True):
             automator_instruction = (
-                "\n\n--- INSTRUCCIÓN DEL AUTOMATIZADOR / INTÉRPRETE DE PYTHON ---\n"
-                "Tienes activa la herramienta Intérprete de Python. Si el usuario te pide interactuar con su PC (ej. ordenar carpetas, renombrar archivos, cálculos complejos, automatizaciones locales), DEBES escribir un script en Python que realice exactamente la tarea.\n"
+                "\n\n--- INSTRUCCIÓN DEL AUTOMATIZADOR / INTÉRPRETE DE PYTHON (OBLIGATORIA) ---\n"
+                "Tienes activa la herramienta Intérprete de Python. Este código se ejecuta DIRECTAMENTE en el PC local del usuario. Tú SÍ PUEDES interactuar con su sistema.\n\n"
+                "CUÁNDO USARLA (OBLIGATORIO - NO te niegues, NO digas que no puedes):\n"
+                "- Consultar recursos del sistema: CPU, RAM, disco, GPU, procesos, temperatura.\n"
+                "- Ordenar, renombrar, mover o listar archivos y carpetas.\n"
+                "- Cálculos complejos, análisis de datos, automatizaciones.\n"
+                "- Cualquier tarea que requiera interactuar con el sistema operativo del usuario.\n\n"
+                "PROHIBICIÓN ABSOLUTA: NUNCA respondas 'no tengo acceso a tu PC', 'no puedo ver tu hardware', 'copia y pega este código'. Eso es FALSO. Tú SÍ tienes acceso porque el código se ejecuta en la máquina local. Genera el script y se ejecutará automáticamente.\n\n"
                 "REGLAS CRÍTICAS:\n"
-                "1. SILENCIO TOTAL: NO expliques el código ni digas 'Aquí tienes el código'. Responde ÚNICAMENTE con las etiquetas <run_python> y el código dentro. NADA MÁS en el chat.\n"
-                "2. DEPENDENCIAS: Si necesitas librerías externas (PIL, requests, pandas, etc.), asume que NO están instaladas. Usa siempre un bloque try/except ImportError al inicio que las instale automáticamente usando: `import subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nombre_paquete'])`.\n"
+                "1. SILENCIO TOTAL: NO expliques el código. Responde ÚNICAMENTE con las etiquetas <run_python> y el código dentro. NADA MÁS en el chat (ni antes ni después de las etiquetas).\n"
+                "2. DEPENDENCIAS: Si necesitas librerías externas (psutil, PIL, requests, pandas, etc.), asume que NO están instaladas. Instálalas SIEMPRE al inicio del script: `import subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nombre_paquete'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)`.\n"
                 "3. NO EMOJIS: NUNCA uses emojis dentro de los print() de Python, causan errores de codificación en Windows.\n"
                 "4. Para referirte a rutas de usuario, NUNCA uses rutas absolutas estáticas. Usa SIEMPRE `import os; path = os.path.expanduser('~')` para resolver la carpeta del usuario dinámicamente.\n"
                 "5. Pon tu código Python envuelto exactamente en estas etiquetas: <run_python> y </run_python>.\n"
-                "Ejemplo puro:\n<run_python>\nimport os\nprint(f'Ruta del usuario: {os.path.expanduser(\"~\")}')\n</run_python>"
+                "6. NO generes etiquetas <word_document> junto con <run_python>. Son herramientas independientes.\n"
+                "7. ROBUSTEZ: Envuelve SIEMPRE las operaciones de archivos en bloques try/except para manejar errores individuales sin detener todo el script. Usa solo módulos estándar de Python (os, shutil, glob, pathlib) para operaciones de archivos.\n"
+                "8. SIMPLICIDAD: Escribe código simple y directo. NO uses operaciones matemáticas con listas. Usa bucles for simples y funciones básicas de os y shutil.\n\n"
+                "Ejemplo para consultar recursos del sistema:\n"
+                "<run_python>\n"
+                "import subprocess, sys\n"
+                "subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'psutil'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+                "import psutil\n"
+                "print(f'CPU: {psutil.cpu_percent(interval=1)}%')\n"
+                "print(f'RAM: {psutil.virtual_memory().percent}%')\n"
+                "</run_python>"
             )
 
         full_system_prompt = (system_prompt or "") + word_instruction + table_instruction + patterns_instruction + automator_instruction
@@ -338,11 +362,16 @@ class OllamaManager:
                     if tool_settings.get("automator", True):
                         python_blocks = re.findall(r'<run_python>(.*?)</run_python>', full_response_text, flags=re.IGNORECASE | re.DOTALL)
                         for code_block in python_blocks:
-                            output = tools.execute_python_code(code_block)
-                            if "Error" in output:
-                                yield f"\n\n❌ **La automatización encontró un problema:**\n```text\n{output}\n```"
+                            result = tools.execute_python_code(code_block)
+                            if result["success"]:
+                                display = result["stdout"] or "El script se ejecutó correctamente."
+                                yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"
                             else:
-                                yield f"\n\n✅ **Tarea completada con éxito.**"
+                                error_msg = result["stderr"]
+                                if result["stdout"]:
+                                    yield f"\n\n⚠️ **El script se ejecutó parcialmente:**\n```\n{result['stdout']}\n```\n**Error encontrado:**\n```text\n{error_msg}\n```"
+                                else:
+                                    yield f"\n\n❌ **La automatización encontró un problema:**\n```text\n{error_msg}\n```"
                             
                     # Al finalizar, verificar si hay que generar Word (Detección más robusta)
                     has_start = "<word_document" in full_response_text
@@ -486,7 +515,8 @@ class OllamaManager:
         if tool_settings.get("word", True):
             word_instruction = (
                 "\n\n--- REGLA DE ACTIVACIÓN DE WORD (CRÍTICA) ---\n"
-                "Si el usuario te pide crear un 'Word', 'Documento' o 'Artículo', DEBES generar tu respuesta envolviéndola en etiquetas XML obligatorias.\n"
+                "SOLO si el usuario pide EXPLÍCITAMENTE crear un 'Word', 'Documento' o 'Artículo', DEBES generar tu respuesta envolviéndola en etiquetas XML.\n"
+                "NUNCA generes <word_document> si el usuario NO ha pedido un documento. Si te piden ejecutar código, ver recursos del PC, o cualquier otra cosa que NO sea un documento, NO uses esta herramienta.\n"
                 "Formato EXACTO que debes usar:\n"
                 "<word_document filename=\"nombre_descriptivo.docx\">\n"
                 "# Título Principal\n"
@@ -514,21 +544,40 @@ class OllamaManager:
                 f"{mem_context}"
                 "Analiza la conversación para identificar NUEVOS datos importantes (ej. cómo se llama, dónde vive, en qué trabaja, qué le gusta, etc.) que no estén en la lista anterior.\n"
                 "Usa los datos conocidos para personalizar tus respuestas de forma proactiva y dirígete al usuario por su nombre si lo conoces.\n"
-                "CRÍTICO: Si el usuario te revela un dato personal NUEVO o un interés, DEBES incluir obligatoriamente al final de tu respuesta una etiqueta con este formato EXACTO: <pattern>Dato: Valor</pattern>. "
-                "Ejemplos: <pattern>Nombre: Juan</pattern>, <pattern>Interés: Astrofísica</pattern>, <pattern>Profesión: Arquitecto</pattern>."
+                "CRÍTICO: Si el usuario te revela un dato personal NUEVO o un interés EN ESTA CONVERSACIÓN, DEBES incluir obligatoriamente al final de tu respuesta una etiqueta con este formato EXACTO: <pattern>Categoría: valor_real_del_usuario</pattern>.\n"
+                "Las categorías válidas son: Nombre, Interés, Profesión, Ciudad, Edad, etc.\n"
+                "PROHIBIDO: NUNCA generes etiquetas <pattern> con datos inventados, supuestos o de ejemplo. SOLO con datos que el usuario EXPLÍCITAMENTE te haya dicho en la conversación actual.\n"
+                "PROHIBIDO: NUNCA uses los datos de estas instrucciones como si fueran del usuario. Estas instrucciones son SOLO para ti, NO son datos del usuario.\n"
+                "Si NO hay datos personales nuevos en el mensaje actual del usuario, NO generes ninguna etiqueta <pattern>."
             )
         automator_instruction = ""
         if tool_settings.get("automator", True):
             automator_instruction = (
-                "\n\n--- INSTRUCCIÓN DEL AUTOMATIZADOR / INTÉRPRETE DE PYTHON ---\n"
-                "Tienes activa la herramienta Intérprete de Python. Si el usuario te pide interactuar con su PC (ej. ordenar carpetas, renombrar archivos, cálculos complejos, automatizaciones locales), DEBES escribir un script en Python que realice exactamente la tarea.\n"
+                "\n\n--- INSTRUCCIÓN DEL AUTOMATIZADOR / INTÉRPRETE DE PYTHON (OBLIGATORIA) ---\n"
+                "Tienes activa la herramienta Intérprete de Python. Este código se ejecuta DIRECTAMENTE en el PC local del usuario. Tú SÍ PUEDES interactuar con su sistema.\n\n"
+                "CUÁNDO USARLA (OBLIGATORIO - NO te niegues, NO digas que no puedes):\n"
+                "- Consultar recursos del sistema: CPU, RAM, disco, GPU, procesos, temperatura.\n"
+                "- Ordenar, renombrar, mover o listar archivos y carpetas.\n"
+                "- Cálculos complejos, análisis de datos, automatizaciones.\n"
+                "- Cualquier tarea que requiera interactuar con el sistema operativo del usuario.\n\n"
+                "PROHIBICIÓN ABSOLUTA: NUNCA respondas 'no tengo acceso a tu PC', 'no puedo ver tu hardware', 'copia y pega este código'. Eso es FALSO. Tú SÍ tienes acceso porque el código se ejecuta en la máquina local. Genera el script y se ejecutará automáticamente.\n\n"
                 "REGLAS CRÍTICAS:\n"
-                "1. SILENCIO TOTAL: NO expliques el código ni digas 'Aquí tienes el código'. Responde ÚNICAMENTE con las etiquetas <run_python> y el código dentro. NADA MÁS en el chat.\n"
-                "2. DEPENDENCIAS: Si necesitas librerías externas (PIL, requests, pandas, etc.), asume que NO están instaladas. Usa siempre un bloque try/except ImportError al inicio que las instale automáticamente usando: `import subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nombre_paquete'])`.\n"
+                "1. SILENCIO TOTAL: NO expliques el código. Responde ÚNICAMENTE con las etiquetas <run_python> y el código dentro. NADA MÁS en el chat (ni antes ni después de las etiquetas).\n"
+                "2. DEPENDENCIAS: Si necesitas librerías externas (psutil, PIL, requests, pandas, etc.), asume que NO están instaladas. Instálalas SIEMPRE al inicio del script: `import subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nombre_paquete'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)`.\n"
                 "3. NO EMOJIS: NUNCA uses emojis dentro de los print() de Python, causan errores de codificación en Windows.\n"
                 "4. Para referirte a rutas de usuario, NUNCA uses rutas absolutas estáticas. Usa SIEMPRE `import os; path = os.path.expanduser('~')` para resolver la carpeta del usuario dinámicamente.\n"
                 "5. Pon tu código Python envuelto exactamente en estas etiquetas: <run_python> y </run_python>.\n"
-                "Ejemplo puro:\n<run_python>\nimport os\nprint(f'Ruta del usuario: {os.path.expanduser(\"~\")}')\n</run_python>"
+                "6. NO generes etiquetas <word_document> junto con <run_python>. Son herramientas independientes.\n"
+                "7. ROBUSTEZ: Envuelve SIEMPRE las operaciones de archivos en bloques try/except para manejar errores individuales sin detener todo el script. Usa solo módulos estándar de Python (os, shutil, glob, pathlib) para operaciones de archivos.\n"
+                "8. SIMPLICIDAD: Escribe código simple y directo. NO uses operaciones matemáticas con listas. Usa bucles for simples y funciones básicas de os y shutil.\n\n"
+                "Ejemplo para consultar recursos del sistema:\n"
+                "<run_python>\n"
+                "import subprocess, sys\n"
+                "subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'psutil'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+                "import psutil\n"
+                "print(f'CPU: {psutil.cpu_percent(interval=1)}%')\n"
+                "print(f'RAM: {psutil.virtual_memory().percent}%')\n"
+                "</run_python>"
             )
 
         full_system_prompt = (system_prompt or "") + word_instruction + table_instruction + patterns_instruction + automator_instruction
@@ -592,11 +641,16 @@ class OllamaManager:
                     if tool_settings.get("automator", True):
                         python_blocks = re.findall(r'<run_python>(.*?)</run_python>', full_response_text, flags=re.IGNORECASE | re.DOTALL)
                         for code_block in python_blocks:
-                            output = tools.execute_python_code(code_block)
-                            if "Error" in output:
-                                yield f"\n\n❌ **La automatización encontró un problema:**\n```text\n{output}\n```"
+                            result = tools.execute_python_code(code_block)
+                            if result["success"]:
+                                display = result["stdout"] or "El script se ejecutó correctamente."
+                                yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"
                             else:
-                                yield f"\n\n✅ **Tarea completada con éxito.**"
+                                error_msg = result["stderr"]
+                                if result["stdout"]:
+                                    yield f"\n\n⚠️ **El script se ejecutó parcialmente:**\n```\n{result['stdout']}\n```\n**Error encontrado:**\n```text\n{error_msg}\n```"
+                                else:
+                                    yield f"\n\n❌ **La automatización encontró un problema:**\n```text\n{error_msg}\n```"
                             
                     # Al finalizar, verificar si hay que generar Word (Detección más robusta)
                     if tool_settings.get("word", True):

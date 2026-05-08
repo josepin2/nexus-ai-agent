@@ -1,3 +1,10 @@
+# Copyright 2026 José Milán Carrasco
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
+"""
+Herramientas para el chatbot
+"""
 import io
 import os
 import re
@@ -363,15 +370,29 @@ def download_youtube_media(url: str, mode: str = 'video', progress_callback=None
     def hook(d):
         nonlocal last_percent
         if d['status'] == 'downloading':
-            p = d.get('_percent_str', '0%').replace('%','')
-            try:
-                percent = float(p)
-                if percent >= last_percent + 1:
-                    last_percent = percent
-                    if progress_callback:
-                        progress_callback(percent, 'Descargando...')
-            except:
-                pass
+            percent = 0
+            # Método 1: Calcular desde bytes (más fiable)
+            downloaded = d.get('downloaded_bytes', 0)
+            total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
+            if downloaded and total and total > 0:
+                percent = (downloaded / total) * 100
+            else:
+                # Método 2: Parsear _percent_str limpiando ANSI codes
+                try:
+                    import re as _re
+                    p_str = d.get('_percent_str', '0%')
+                    # Limpiar códigos ANSI: \x1b[...m
+                    p_clean = _re.sub(r'\x1b\[[0-9;]*m', '', p_str)
+                    p_clean = p_clean.replace('%', '').strip()
+                    percent = float(p_clean)
+                except (ValueError, TypeError):
+                    return
+            
+            percent = min(percent, 99.9)  # Reservar 100% para 'finished'
+            if percent >= last_percent + 1:
+                last_percent = percent
+                if progress_callback:
+                    progress_callback(percent, 'Descargando...')
         elif d['status'] == 'finished':
             if progress_callback:
                 progress_callback(100, 'Finalizando...')
@@ -413,18 +434,24 @@ def download_youtube_media(url: str, mode: str = 'video', progress_callback=None
             return "Error: FFmpeg no encontrado. Es necesario para procesar videos de YouTube. Por favor instálalo."
         return f"Error: {error_msg}"
 
-def execute_python_code(code: str) -> str:
-    """Ejecuta código Python localmente de forma segura capturando la salida."""
+def execute_python_code(code: str) -> dict:
+    """Ejecuta código Python localmente de forma segura capturando la salida.
+    
+    Returns:
+        dict con keys: 'stdout', 'stderr', 'success'
+    """
     try:
         logging.info("tools.py: Ejecutando script de python generado por IA.")
         # Limpiar posibles comillas markdown residuales
         if code.startswith("```python"):
             code = code[9:]
+        if code.startswith("```"):
+            code = code[3:]
         if code.endswith("```"):
             code = code[:-3]
         code = code.strip()
 
-        # Ejecutar en un subproceso con timeout de 30s
+        # Ejecutar en un subproceso con timeout de 60s
         import os
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
@@ -433,21 +460,30 @@ def execute_python_code(code: str) -> str:
             [sys.executable, "-c", code],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=60,
             encoding='utf-8',
             errors='replace',
             env=env
         )
         
-        output = result.stdout
-        if result.stderr:
-            output += f"\nErrores/Advertencias:\n{result.stderr}"
-            
-        if not output.strip():
-            return "El script se ejecutó correctamente sin devolver ninguna salida visible."
-            
-        return output.strip()
+        stdout = result.stdout.strip() if result.stdout else ""
+        stderr = result.stderr.strip() if result.stderr else ""
+        success = result.returncode == 0
+        
+        return {
+            "stdout": stdout,
+            "stderr": stderr,
+            "success": success
+        }
     except subprocess.TimeoutExpired:
-        return "Error: El script tardó demasiado (más de 30 segundos) y fue interrumpido."
+        return {
+            "stdout": "",
+            "stderr": "Error: El script tardó demasiado (más de 60 segundos) y fue interrumpido.",
+            "success": False
+        }
     except Exception as e:
-        return f"Error crítico al ejecutar: {e}"
+        return {
+            "stdout": "",
+            "stderr": f"Error crítico al ejecutar: {e}",
+            "success": False
+        }
