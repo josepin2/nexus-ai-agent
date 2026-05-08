@@ -81,6 +81,10 @@ Este proyecto fue concebido bajo el principio de **Soberanía de Datos**. Nada d
 
 ---
 
-## 📜 Licencia
+## 📜 Licencia y Copyright
 
-Este proyecto se distribuye bajo la licencia **Apache License 2.0**. Eres libre de utilizarlo, modificarlo y distribuirlo, tanto para fines personales como comerciales. Para más información, consulta el archivo `LICENSE` adjunto.
+Copyright © 2026 **José Milán Carrasco (JosePin2)**.
+
+Este proyecto se distribuye bajo la licencia **Apache License 2.0**. Eres libre de utilizarlo, modificarlo y distribuirlo, tanto para fines personales como comerciales, siempre que se mantenga el aviso de copyright y se otorgue el crédito correspondiente al autor original.
+
+Para más información, consulta el archivo `LICENSE` adjunto o visita el perfil del autor en [GitHub](https://github.com/josepin2).
