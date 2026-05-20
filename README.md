@@ -16,6 +16,8 @@ Tu Agente cuenta con una "Caja de Herramientas" (Toolbox) modular que puedes act
 - 🎬 **Gestor de YouTube Integrado:** Proporciónale una URL de YouTube y te descargará el vídeo (mp4) o el audio (mp3) usando `yt-dlp` en calidad óptima, guardándolo en tu carpeta local.
 - 🎥 **🆕 Resumen de Videos con Whisper:** Envía cualquier URL de YouTube y el agente generará automáticamente un resumen estructurado usando Whisper (transcripción con IA) cuando no haya subtítulos disponibles. Si mencionas "Word" o "documento", te descargará el resumen en formato `.docx` formateado profesionalmente.
 - 📄 **Generador de Documentos Word:** Pídele que te redacte un informe formal y el agente creará mágicamente un archivo `.docx` formateado profesionalmente y te dará un enlace directo para descargarlo o abrirlo.
+- 🖼️ **Generador de Videos con Fotos:** Indica una carpeta con imágenes y un archivo MP3, y el agente creará automáticamente un video MP4 profesional con transiciones suaves, sincronización de audio y efectos fade.
+- 💻 **Monitor de Recursos del Sistema:** Pregunta al agente sobre tu PC y podrá decirte el consumo de CPU, RAM, disco, tipo de procesador, memoria disponible y más usando el intérprete de Python.
 - 🗣️ **Interfaz de Streaming y Markdown:** Diseño Glassmorphism premium. Disfruta de respuestas fluidas en tiempo real, renderizado de tablas, fragmentos de código con sintaxis resaltada y modo oscuro.
 
 ---
