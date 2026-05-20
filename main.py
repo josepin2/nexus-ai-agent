@@ -236,7 +236,7 @@ async def chat_stream(request: ChatRequest):
                 system_prompt=request.system_prompt,
                 history=request.history,
                 progress_callback=sync_callback,
-                tool_settings=request.tool_settings.dict() if request.tool_settings else None
+                tool_settings=request.tool_settings.model_dump() if request.tool_settings else None
             ),
             media_type="text/plain"
         )

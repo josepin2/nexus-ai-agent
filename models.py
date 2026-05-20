@@ -9,6 +9,7 @@ import json
 import httpx
 import re
 import threading
+import asyncio
 from typing import List, Dict, Any
 from config import OLLAMA_BASE_URL, HOST, PORT
 import tools
@@ -148,17 +149,74 @@ class OllamaManager:
             yield "Error: No se ha seleccionado ningún modelo."
             return
 
-        # Detectar descargas de YouTube
-        yt_match = re.search(r'(https?://(?:www\.)?youtube\.com/[^\s<>"]+|https?://youtu\.be/[^\s<>"]+)', prompt)
-        is_download_request = any(word in prompt.lower() for word in ['descarga', 'bájame', 'bajar', 'download'])
-        
-        # Detectar descargas de YouTube
+        # Detectar descargas o resúmenes de YouTube
         if prompt and tool_settings.get("youtube", True):
             # Regex mejorada para limpiar puntos finales o caracteres raros al final de la URL
             yt_match = re.search(r'(https?://(?:www\.)?youtube\.com/watch\?v=[^\s&<>"]+|https?://(?:www\.)?youtube\.com/embed/[^\s&<>"]+|https?://youtu\.be/[^\s&<>"]+)', prompt)
             is_download_request = any(word in prompt.lower() for word in ['descarga', 'bájame', 'bajar', 'download'])
+            is_summary_request = any(word in prompt.lower() for word in ['resume', 'resumen', 'resumir', 'sintetiza', 'analiza', 'resumeme'])
             
-            if yt_match and is_download_request:
+            if yt_match and is_summary_request and not is_download_request:
+                url = yt_match.group(1).rstrip('.')
+                yield "🔍 **Analizando video de YouTube...**\n"
+                
+                wants_word = any(word in prompt.lower() for word in ['word', 'documento', 'doc', 'archivo doc', 'descargar word'])
+                wants_whisper = any(word in prompt.lower() for word in ['whisper', 'wisper'])
+                
+                subtitles = None
+                if not (wants_word or wants_whisper):
+                    yield "📝 Intentando descargar subtítulos del video para un resumen rápido...\n"
+                    subtitles = await asyncio.to_thread(tools.get_youtube_subtitles_clean, url)
+                
+                transcript = ""
+                if subtitles:
+                    yield "✅ Subtítulos obtenidos. Generando resumen...\n\n"
+                    transcript = subtitles
+                else:
+                    if wants_word or wants_whisper:
+                        yield "🎙️ Solicitado con Whisper/Word. Descargando audio y transcribiendo con Whisper local (esto puede tardar unos minutos)...\n"
+                    else:
+                        yield "🎙️ No se encontraron subtítulos. Descargando audio y transcribiendo con Whisper local (esto puede tardar unos minutos)...\n"
+                    
+                    def whisper_progress(percent, msg):
+                        progress_callback(percent, msg, status="downloading")
+                        
+                    # Lanzar en una tarea asíncrona en segundo plano para poder hacer yield de keep-alives
+                    task = asyncio.create_task(
+                        asyncio.to_thread(
+                            tools.transcribe_youtube_audio_with_whisper, 
+                            url, 
+                            whisper_progress
+                        )
+                    )
+                    
+                    # Mantener viva la conexión enviando espacios en blanco (keep-alive) cada 2 segundos
+                    while not task.done():
+                        yield " "
+                        await asyncio.sleep(2)
+                        
+                    transcript = await task
+                    
+                    if "[Error" in transcript:
+                        yield f"❌ Error: {transcript}\n"
+                        return
+                    
+                    yield "✅ Transcripción con Whisper completada. Generando resumen...\n\n"
+                
+                prompt = (
+                    f"A continuación se presenta la transcripción/subtítulos del video de YouTube:\n\n"
+                    f"\"\"\"\n{transcript}\n\"\"\"\n\n"
+                    f"Por favor, realiza un resumen bien estructurado, conciso y directo, analizando los puntos más importantes de manera clara y entendible.\n\n"
+                    f"REGLAS CRÍTICAS DE REDACCIÓN Y ESTILO:\n"
+                    f"1. REDACCIÓN EN PRIMERA PERSONA / DIRECTA: Redacta el resumen en primera persona o de forma totalmente directa como si fueras un redactor profesional que resume las ideas de manera natural (ej. 'Comienzo analizando...', 'Presento los puntos principales...').\n"
+                    f"2. PROHIBICIÓN DE TERCERA PERSONA: Está estrictamente prohibido usar frases que hagan referencia al video o ponente en tercera persona (como 'el ponente dice', 'el video explica', 'la persona comenta', 'en este video se habla de', etc.). Expresa los conceptos directamente.\n"
+                    f"3. ALINEACIÓN Y FORMATO PERFECTO (CRÍTICO): NUNCA comiences una línea de viñeta con espacios en blanco o tabuladores al principio. Todos los puntos de la lista deben comenzar pegados al margen izquierdo. Usa ÚNICAMENTE el guion estándar (`-`) seguido de un solo espacio (ej. '- Concepto clave:') para las viñetas. NUNCA utilices caracteres especiales como '•' o círculos raros para hacer viñetas, ni dejes múltiples espacios tras el guion.\n\n"
+                    f"Petición original del usuario: {prompt}"
+                )
+                if wants_word:
+                    prompt += "\n\nOBLIGATORIO: Como el usuario pidió Word, envuelve TODO el resumen estructurado generado en la etiqueta XML <word_document filename=\"Resumen_Video.docx\"> al inicio y </word_document> al final, siguiendo exactamente la regla de activación de Word."
+            
+            elif yt_match and is_download_request:
                 url = yt_match.group(1).rstrip('.') # Limpiar punto final si existe
                 mode = 'audio' if any(word in prompt.lower() for word in ['audio', 'mp3', 'sonido', 'música']) else 'video'
                 
@@ -422,13 +480,75 @@ class OllamaManager:
             yield "Error: No se ha seleccionado ningún modelo."
             return
 
-        # Detectar descargas de YouTube
+        # Detectar descargas o resúmenes de YouTube
         if prompt and tool_settings.get("youtube", True):
-            yt_match = re.search(r'(https?://(?:www\.)?youtube\.com/[^\s<>"]+|https?://youtu\.be/[^\s<>"]+)', prompt)
+            # Regex mejorada para limpiar puntos finales o caracteres raros al final de la URL
+            yt_match = re.search(r'(https?://(?:www\.)?youtube\.com/watch\?v=[^\s&<>"]+|https?://(?:www\.)?youtube\.com/embed/[^\s&<>"]+|https?://youtu\.be/[^\s&<>"]+)', prompt)
             is_download_request = any(word in prompt.lower() for word in ['descarga', 'bájame', 'bajar', 'download'])
+            is_summary_request = any(word in prompt.lower() for word in ['resume', 'resumen', 'resumir', 'sintetiza', 'analiza', 'resumeme'])
             
-            if yt_match and is_download_request:
-                url = yt_match.group(1)
+            if yt_match and is_summary_request and not is_download_request:
+                url = yt_match.group(1).rstrip('.')
+                yield "🔍 **Analizando video de YouTube...**\n"
+                
+                wants_word = any(word in prompt.lower() for word in ['word', 'documento', 'doc', 'archivo doc', 'descargar word'])
+                wants_whisper = any(word in prompt.lower() for word in ['whisper', 'wisper'])
+                
+                subtitles = None
+                if not (wants_word or wants_whisper):
+                    yield "📝 Intentando descargar subtítulos del video para un resumen rápido...\n"
+                    subtitles = await asyncio.to_thread(tools.get_youtube_subtitles_clean, url)
+                
+                transcript = ""
+                if subtitles:
+                    yield "✅ Subtítulos obtenidos. Generando resumen...\n\n"
+                    transcript = subtitles
+                else:
+                    if wants_word or wants_whisper:
+                        yield "🎙️ Solicitado con Whisper/Word. Descargando audio y transcribiendo con Whisper local (esto puede tardar unos minutos)...\n"
+                    else:
+                        yield "🎙️ No se encontraron subtítulos. Descargando audio y transcribiendo con Whisper local (esto puede tardar unos minutos)...\n"
+                    
+                    def whisper_progress(percent, msg):
+                        progress_callback(percent, msg, status="downloading")
+                        
+                    # Lanzar en una tarea asíncrona en segundo plano para poder hacer yield de keep-alives
+                    task = asyncio.create_task(
+                        asyncio.to_thread(
+                            tools.transcribe_youtube_audio_with_whisper, 
+                            url, 
+                            whisper_progress
+                        )
+                    )
+                    
+                    # Mantener viva la conexión enviando espacios en blanco (keep-alive) cada 2 segundos
+                    while not task.done():
+                        yield " "
+                        await asyncio.sleep(2)
+                        
+                    transcript = await task
+                    
+                    if "[Error" in transcript:
+                        yield f"❌ Error: {transcript}\n"
+                        return
+                    
+                    yield "✅ Transcripción con Whisper completada. Generando resumen...\n\n"
+                
+                prompt = (
+                    f"A continuación se presenta la transcripción/subtítulos del video de YouTube:\n\n"
+                    f"\"\"\"\n{transcript}\n\"\"\"\n\n"
+                    f"Por favor, realiza un resumen bien estructurado, conciso y directo, analizando los puntos más importantes de manera clara y entendible.\n\n"
+                    f"REGLAS CRÍTICAS DE REDACCIÓN Y ESTILO:\n"
+                    f"1. REDACCIÓN EN PRIMERA PERSONA / DIRECTA: Redacta el resumen en primera persona o de forma totalmente directa como si fueras un redactor profesional que resume las ideas de manera natural (ej. 'Comienzo analizando...', 'Presento los puntos principales...').\n"
+                    f"2. PROHIBICIÓN DE TERCERA PERSONA: Está estrictamente prohibido usar frases que hagan referencia al video o ponente en tercera persona (como 'el ponente dice', 'el video explica', 'la persona comenta', 'en este video se habla de', etc.). Expresa los conceptos directamente.\n"
+                    f"3. ALINEACIÓN Y FORMATO PERFECTO (CRÍTICO): NUNCA comiences una línea de viñeta con espacios en blanco o tabuladores al principio. Todos los puntos de la lista deben comenzar pegados al margen izquierdo. Usa ÚNICAMENTE el guion estándar (`-`) seguido de un solo espacio (ej. '- Concepto clave:') para las viñetas. NUNCA utilices caracteres especiales como '•' o círculos raros para hacer viñetas, ni dejes múltiples espacios tras el guion.\n\n"
+                    f"Petición original del usuario: {prompt}"
+                )
+                if wants_word:
+                    prompt += "\n\nOBLIGATORIO: Como el usuario pidió Word, envuelve TODO el resumen estructurado generado en la etiqueta XML <word_document filename=\"Resumen_Video.docx\"> al inicio y </word_document> al final, siguiendo exactamente la regla de activación de Word."
+            
+            elif yt_match and is_download_request:
+                url = yt_match.group(1).rstrip('.') # Limpiar punto final si existe
                 mode = 'audio' if any(word in prompt.lower() for word in ['audio', 'mp3', 'sonido', 'música']) else 'video'
                 
                 logging.info(f"Iniciando descarga de YouTube (Background with file): {url} en modo {mode}")

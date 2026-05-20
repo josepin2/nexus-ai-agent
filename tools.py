@@ -9,6 +9,7 @@ import io
 import os
 import re
 import uuid
+from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 import PyPDF2
@@ -434,6 +435,133 @@ def download_youtube_media(url: str, mode: str = 'video', progress_callback=None
             return "Error: FFmpeg no encontrado. Es necesario para procesar videos de YouTube. Por favor instálalo."
         return f"Error: {error_msg}"
 
+def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
+    """Crea un video MP4 desde imágenes + un MP3 dentro de una carpeta."""
+    try:
+        if progress_callback:
+            progress_callback(5, "Preparando creación de video...")
+
+        folder_input = (folder_input or "").strip().strip('"').strip("'")
+        if not folder_input:
+            return "Error: No se indicó una carpeta."
+
+        # Resolver ruta: absoluta o relativa al Escritorio del usuario
+        if os.path.isabs(folder_input):
+            folder_path = Path(folder_input)
+        else:
+            desktop = Path.home() / "Desktop"
+            folder_path = desktop / folder_input
+
+        if not folder_path.exists() or not folder_path.is_dir():
+            return f"Error: La carpeta no existe: {folder_path}"
+
+        if progress_callback:
+            progress_callback(15, "Buscando imágenes y audio...")
+
+        image_exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+        images = sorted([p for p in folder_path.iterdir() if p.is_file() and p.suffix.lower() in image_exts])
+        mp3_files = sorted([p for p in folder_path.iterdir() if p.is_file() and p.suffix.lower() == ".mp3"])
+
+        if not images:
+            return "Error: No se encontraron imágenes en la carpeta."
+        if not mp3_files:
+            return "Error: No se encontró ningún archivo MP3 en la carpeta."
+
+        audio_file = mp3_files[0]
+        if not os.path.exists("downloads"):
+            os.makedirs("downloads")
+
+        safe_base = re.sub(r"[^\w\-. ]", "", folder_path.name).strip().replace(" ", "_") or "video"
+        output_name = f"{safe_base}.mp4"
+        output_path = Path("downloads") / output_name
+
+        # Archivo de lista para ffmpeg (concat demuxer)
+        list_file = Path("downloads") / f"ffmpeg_list_{uuid.uuid4().hex[:8]}.txt"
+
+        if progress_callback:
+            progress_callback(35, "Preparando secuencia de imágenes...")
+
+        with open(list_file, "w", encoding="utf-8") as f:
+            for img in images:
+                img_posix = img.resolve().as_posix()
+                f.write(f"file '{img_posix}'\n")
+                f.write("duration 4\n")
+            # Repetir última imagen para que ffmpeg respete su duración
+            f.write(f"file '{images[-1].resolve().as_posix()}'\n")
+
+        if progress_callback:
+            progress_callback(60, "Renderizando video con audio...")
+
+        # Duración estimada del video (4s por imagen)
+        video_duration = float(len(images) * 4)
+
+        # Intentar leer duración real del audio para calcular fade out suave al final
+        audio_duration = 0.0
+        try:
+            probe_cmd = [
+                "ffprobe",
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(audio_file.resolve())
+            ]
+            probe_res = subprocess.run(probe_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if probe_res.returncode == 0 and probe_res.stdout.strip():
+                audio_duration = float(probe_res.stdout.strip())
+        except Exception:
+            audio_duration = 0.0
+
+        output_duration = min(video_duration, audio_duration) if audio_duration > 0 else video_duration
+        fade_in_duration = 0.6
+        fade_out_duration = 0.8
+
+        # Importante: evitamos fade out visual para no producir pantalla negra al final.
+        # Dejamos solo fade in en video y fade in/out en audio (out al final real con areverse).
+        video_filter = (
+            f"fps=30,format=yuv420p,"
+            f"fade=t=in:st=0:d={fade_in_duration:.2f}"
+        )
+        audio_filter = (
+            f"afade=t=in:st=0:d={fade_in_duration:.2f},"
+            f"areverse,afade=t=in:st=0:d={fade_out_duration:.2f},areverse"
+        )
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(list_file.resolve()),
+            "-i", str(audio_file.resolve()),
+            "-vf", video_filter,
+            "-af", audio_filter,
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-shortest",
+            str(output_path.resolve())
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+        try:
+            if list_file.exists():
+                list_file.unlink()
+        except Exception:
+            pass
+
+        if result.returncode != 0:
+            err = (result.stderr or "").strip()
+            if "ffmpeg" in err.lower():
+                return "Error: FFmpeg no encontrado o no disponible en PATH."
+            return f"Error: No se pudo crear el video. {err[:400]}"
+
+        if progress_callback:
+            progress_callback(100, "Video creado correctamente.")
+        return output_name
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 def execute_python_code(code: str) -> dict:
     """Ejecuta código Python localmente de forma segura capturando la salida.
     
@@ -487,3 +615,117 @@ def execute_python_code(code: str) -> dict:
             "stderr": f"Error crítico al ejecutar: {e}",
             "success": False
         }
+
+def get_youtube_subtitles_clean(url: str) -> str:
+    """Intenta descargar subtítulos o transcripción automática de YouTube usando yt-dlp.
+    Devuelve el texto limpio o None si no hay subtítulos o si falla."""
+    logging.info(f"tools.py: Intentando obtener subtítulos para {url}")
+    # Limpiar url de posibles caracteres residuales
+    url = url.strip().rstrip('.')
+    ydl_opts = {
+        'skip_download': True,
+        'writesubtitles': True,
+        'writeautomaticsub': True,
+        'subtitleslangs': ['es', 'es-419', 'en'],
+        'quiet': True,
+        'no_warnings': True,
+        'outtmpl': 'downloads/%(id)s.%(ext)s',
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            info = ydl.extract_info(url, download=True)
+            video_id = info.get('id')
+            if not video_id:
+                return None
+            
+            import glob
+            # Buscar archivos VTT en downloads que coincidan con el id del video
+            files = glob.glob(os.path.join('downloads', f"{video_id}.*.vtt"))
+            if not files:
+                return None
+            
+            # Leer el primer archivo encontrado
+            vtt_file = files[0]
+            logging.info(f"tools.py: Leyendo archivo de subtítulos: {vtt_file}")
+            with open(vtt_file, 'r', encoding='utf-8', errors='replace') as f:
+                lines = f.readlines()
+            
+            # Borrar archivos temporales descargados
+            for f_path in files:
+                try:
+                    os.remove(f_path)
+                except Exception as ex:
+                    logging.error(f"Error al borrar archivo de subtítulos temporal {f_path}: {ex}")
+            
+            # Limpiar contenido VTT
+            text_lines = []
+            for line in lines:
+                line = line.strip()
+                # Omitir metadatos de VTT y marcas de tiempo
+                if not line or line.startswith('WEBVTT') or line.startswith('Kind:') or line.startswith('Language:') or '-->' in line or line.isdigit():
+                    continue
+                # Limpiar las marcas de alineación HTML (como <c>...) y duplicados simples
+                clean_line = re.sub(r'<[^>]+>', '', line).strip()
+                if clean_line and (not text_lines or text_lines[-1] != clean_line):
+                    text_lines.append(clean_line)
+                    
+            text = " ".join(text_lines)
+            # Limitar tamaño de subtítulos para no saturar el contexto de Ollama
+            return text[:20000]
+        except Exception as e:
+            logging.error(f"Error obteniendo subtítulos con yt-dlp: {e}")
+            return None
+
+def transcribe_youtube_audio_with_whisper(url: str, progress_callback=None) -> str:
+    """Descarga el audio de un video de YouTube y lo transcribe usando Whisper local.
+    Devuelve la transcripción limpia o un mensaje de error."""
+    logging.info(f"tools.py: Iniciando transcripción con Whisper para {url}")
+    
+    # 1. Descargar audio con progress_callback
+    if progress_callback:
+        progress_callback(10, "Descargando audio de YouTube para transcribir...")
+    
+    # Llamamos a download_youtube_media con mode='audio'
+    filename = download_youtube_media(url, mode='audio', progress_callback=progress_callback)
+    if "Error" in filename:
+        return f"[Error al descargar el audio del video para transcribir: {filename}]"
+    
+    audio_path = os.path.join('downloads', filename)
+    
+    if not os.path.exists(audio_path):
+        return f"[Error: El archivo de audio descargado no existe en {audio_path}]"
+        
+    try:
+        # 2. Cargar Whisper y transcribir
+        if progress_callback:
+            progress_callback(40, "Inicializando Whisper local (modelo base)...")
+            
+        import whisper
+        # Cargamos el modelo "base" multilenguaje. Es un buen equilibrio entre rapidez y precisión.
+        model = whisper.load_model("base")
+        
+        if progress_callback:
+            progress_callback(60, "Procesando audio y transcribiendo (esto puede tardar un momento)...")
+            
+        result = model.transcribe(audio_path)
+        transcript = result.get("text", "").strip()
+        
+        if not transcript:
+            return "[Error: Whisper no detectó audio o el texto transcrito está vacío]"
+            
+        if progress_callback:
+            progress_callback(95, "Transcripción completada con éxito.")
+            
+        return transcript
+    except Exception as e:
+        logging.error(f"Error transcribiendo con Whisper: {e}")
+        return f"[Error durante la transcripción con Whisper: {str(e)}]"
+    finally:
+        # Borrar el archivo de audio temporal de downloads para liberar espacio
+        try:
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+                logging.info(f"tools.py: Archivo de audio temporal borrado: {audio_path}")
+        except Exception as ex:
+            logging.error(f"Error borrando archivo de audio temporal {audio_path}: {ex}")
+
