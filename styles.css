@@ -56,10 +56,8 @@ body {
 .sidebar-header h1 {
     font-size: 1.8rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
 /* Model Selector */
@@ -89,13 +87,13 @@ body {
 }
 
 .model-selector select:hover {
-    border-color: var(--accent-primary);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .model-selector select:focus {
     outline: none;
-    border-color: var(--accent-secondary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .btn-icon {
@@ -152,7 +150,7 @@ body {
 }
 
 .btn-icon-small:hover {
-    color: var(--accent-primary);
+    color: var(--text-primary);
 }
 
 .chat-history-list {
@@ -191,9 +189,9 @@ body {
 }
 
 .chat-history-list li.active {
-    background: var(--accent-primary);
-    color: white;
-    border-color: var(--accent-primary);
+    background: #2a2a2a;
+    color: var(--text-primary);
+    border-color: #444444;
 }
 
 /* Sidebar Footer */
@@ -527,8 +525,8 @@ body {
 }
 
 .input-wrapper:focus-within {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 2px 12px rgba(0,0,0,0.2);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05), 0 2px 12px rgba(0,0,0,0.2);
 }
 
 #user-input {
@@ -553,9 +551,9 @@ body {
 }
 
 .send-btn {
-    background: var(--accent-primary);
-    border: none;
-    color: white;
+    background: #2a2a2a;
+    border: 1px solid #444444;
+    color: var(--text-primary);
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -570,8 +568,9 @@ body {
 }
 
 .send-btn:hover:not(:disabled) {
-    background: var(--accent-hover);
-    transform: scale(1.08);
+    background: #3a3a3a;
+    border-color: #666666;
+    transform: scale(1.06);
 }
 
 .send-btn:disabled {
@@ -776,8 +775,8 @@ body {
 
 .form-group textarea:focus {
     outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .modal-footer {
@@ -789,9 +788,9 @@ body {
 }
 
 .btn-primary {
-    background: var(--accent-primary);
-    color: white;
-    border: none;
+    background: #2a2a2a;
+    color: var(--text-primary);
+    border: 1px solid #444444;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-size: 0.95rem;
@@ -801,7 +800,8 @@ body {
 }
 
 .btn-primary:hover {
-    background: var(--accent-hover);
+    background: #3a3a3a;
+    border-color: #666666;
 }
 
 .btn-ghost {
@@ -1138,33 +1138,31 @@ body {
 /* ── Créditos ────────────────────────── */
 .btn-credits-premium {
     margin-top: 15px;
-    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
-    color: white;
-    border: none;
-    padding: 0.7rem 1.2rem;
-    border-radius: 50px;
-    font-size: 0.82rem;
-    font-weight: 700;
+    background: #1e1e1e;
+    color: var(--text-secondary);
+    border: 1px solid #333333;
+    padding: 0.65rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s ease;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.01em;
 }
 
 .btn-credits-premium:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-    filter: brightness(1.1);
+    background: #2a2a2a;
+    border-color: #555555;
+    color: var(--text-primary);
 }
 
 .btn-credits-premium:active {
-    transform: translateY(0) scale(0.98);
+    transform: scale(0.98);
 }
 
 .credits-content {
