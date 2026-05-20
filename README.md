@@ -14,6 +14,7 @@ Tu Agente cuenta con una "Caja de Herramientas" (Toolbox) modular que puedes act
 - 💻 **Automatizador Local (Intérprete de Código Python):** Nexus puede escribir y ejecutar scripts de Python silenciosamente en tu ordenador para organizar tus carpetas, convertir archivos, hacer cálculos masivos y auto-instalarse librerías (como `Pillow` o `pandas`) si lo necesita.
 - 🌐 **Búsqueda Web en Tiempo Real:** Si le haces una pregunta sobre un evento actual que el modelo desconoce, el agente rastrea internet, lee las páginas web y te hace un resumen estructurado.
 - 🎬 **Gestor de YouTube Integrado:** Proporciónale una URL de YouTube y te descargará el vídeo (mp4) o el audio (mp3) usando `yt-dlp` en calidad óptima, guardándolo en tu carpeta local.
+- 🎥 **🆕 Resumen de Videos con Whisper:** Envía cualquier URL de YouTube y el agente generará automáticamente un resumen estructurado usando Whisper (transcripción con IA) cuando no haya subtítulos disponibles. Si mencionas "Word" o "documento", te descargará el resumen en formato `.docx` formateado profesionalmente.
 - 📄 **Generador de Documentos Word:** Pídele que te redacte un informe formal y el agente creará mágicamente un archivo `.docx` formateado profesionalmente y te dará un enlace directo para descargarlo o abrirlo.
 - 🗣️ **Interfaz de Streaming y Markdown:** Diseño Glassmorphism premium. Disfruta de respuestas fluidas en tiempo real, renderizado de tablas, fragmentos de código con sintaxis resaltada y modo oscuro.
 
