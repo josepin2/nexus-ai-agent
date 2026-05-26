@@ -244,6 +244,63 @@ class OllamaManager:
                 threading.Thread(target=run_download_task, daemon=True).start()
                 return
 
+        # Detectar creación de video desde carpeta
+        if prompt and tool_settings.get("automator", True):
+            prompt_lower = prompt.lower()
+            video_keywords = ['video', 'vídeo', 'videoclip', 'slideshow', 'montaje']
+            folder_keywords = ['carpeta', 'fotos', 'imágenes', 'imagenes', 'folder', 'directorio']
+            is_video_request = any(kw in prompt_lower for kw in video_keywords) and any(kw in prompt_lower for kw in folder_keywords)
+            
+            if is_video_request:
+                # Extraer nombre de carpeta del prompt
+                # Intentar extraer texto entre comillas o después de "carpeta"/"llamada"/"nombre"
+                folder_name = None
+                # Buscar entre comillas
+                quoted = re.search(r'["\']([^"\']+)["\']', prompt)
+                if quoted:
+                    folder_name = quoted.group(1)
+                else:
+                    # Buscar primero indicaciones de nombre con palabras intermedias (ej. carpeta de mi escritorio llamada asado)
+                    folder_match = re.search(r'(?:carpeta|folder|directorio).+?(?:llamada|llamado|que se llama|de nombre|con nombre)\s*["\']?([\w\s.-]+)', prompt_lower)
+                    if not folder_match:
+                        # Buscar con indicación directa (ej. carpeta llamada asado)
+                        folder_match = re.search(r'(?:carpeta|folder|directorio)\s+(?:llamada|llamado|que se llama|de nombre|con nombre)\s*["\']?([\w\s.-]+)', prompt_lower)
+                    if not folder_match:
+                        # Buscar patrón general
+                        folder_match = re.search(r'(?:carpeta|folder|directorio)\s+(?:que se llama|llamada|llamado|de|del escritorio)?\s*["\']?([\w\s.-]+)', prompt_lower)
+                    
+                    if folder_match:
+                        raw_folder_name = folder_match.group(1).strip()
+                        # Limpiar cortando en signos de puntuación o palabras clave que rompen el nombre
+                        raw_folder_name = re.split(r'[,;.\n]', raw_folder_name)[0]
+                        stop_words_list = [
+                            r'\by\b', r'\bcon\b', r'\bdentro\b', r'\badentro\b', r'\bahí\b', r'\bahi\b',
+                            r'\baquí\b', r'\baqui\b', r'\ballí\b', r'\balli\b', r'\bque\b', r'\ben\b',
+                            r'\bpara\b', r'\bde\b', r'\bhace\b', r'\bhaz\b', r'\bhacer\b', r'\bhay\b',
+                            r'\btiene\b', r'\bcontiene\b', r'\bdonde\b', r'\bdel\b', r'\bal\b', r'\bcomo\b'
+                        ]
+                        for stop_w in stop_words_list:
+                            raw_folder_name = re.split(stop_w, raw_folder_name, flags=re.IGNORECASE)[0]
+                        folder_name = raw_folder_name.strip().rstrip('.').strip()
+                
+                if folder_name:
+                    logging.info(f"Detectada petición de video desde carpeta: {folder_name}")
+                    yield f"🎬 Entendido. Voy a crear un video con las fotos y el audio de la carpeta **{folder_name}**. Puedes ver el progreso en la barra lateral izquierda.\n\n"
+                    
+                    def run_video_task():
+                        try:
+                            result = tools.create_video_from_folder(folder_name, progress_callback)
+                            if "Error" in result:
+                                progress_callback(0, f"Error: {result}", status="error")
+                            else:
+                                progress_callback(100, "Video creado correctamente.", status="completed", filename=result)
+                        except Exception as e:
+                            logging.error(f"Error en tarea de video bg: {e}")
+                            progress_callback(0, f"Error critico: {str(e)}", status="error")
+                    
+                    threading.Thread(target=run_video_task, daemon=True).start()
+                    return
+
         # Detección de intención de búsqueda y extracción de URLs
         if prompt and tool_settings.get("web_search", True):
             urls_in_prompt = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', prompt)
@@ -568,6 +625,61 @@ class OllamaManager:
                 import threading
                 threading.Thread(target=run_download_task, daemon=True).start()
                 return
+
+        # Detectar creación de video desde carpeta
+        if prompt and tool_settings.get("automator", True):
+            prompt_lower_v = prompt.lower()
+            video_keywords = ['video', 'vídeo', 'videoclip', 'slideshow', 'montaje']
+            folder_keywords = ['carpeta', 'fotos', 'imágenes', 'imagenes', 'folder', 'directorio']
+            is_video_request = any(kw in prompt_lower_v for kw in video_keywords) and any(kw in prompt_lower_v for kw in folder_keywords)
+            
+            if is_video_request:
+                folder_name = None
+                quoted = re.search(r'["\']([^"\']+)["\']', prompt)
+                if quoted:
+                    folder_name = quoted.group(1)
+                else:
+                    # Buscar primero indicaciones de nombre con palabras intermedias (ej. carpeta de mi escritorio llamada asado)
+                    folder_match = re.search(r'(?:carpeta|folder|directorio).+?(?:llamada|llamado|que se llama|de nombre|con nombre)\s*["\']?([\w\s.-]+)', prompt_lower_v)
+                    if not folder_match:
+                        # Buscar con indicación directa (ej. carpeta llamada asado)
+                        folder_match = re.search(r'(?:carpeta|folder|directorio)\s+(?:llamada|llamado|que se llama|de nombre|con nombre)\s*["\']?([\w\s.-]+)', prompt_lower_v)
+                    if not folder_match:
+                        # Buscar patrón general
+                        folder_match = re.search(r'(?:carpeta|folder|directorio)\s+(?:que se llama|llamada|llamado|de|del escritorio)?\s*["\']?([\w\s.-]+)', prompt_lower_v)
+                    
+                    if folder_match:
+                        raw_folder_name = folder_match.group(1).strip()
+                        # Limpiar cortando en signos de puntuación o palabras clave que rompen el nombre
+                        raw_folder_name = re.split(r'[,;.\n]', raw_folder_name)[0]
+                        stop_words_list = [
+                            r'\by\b', r'\bcon\b', r'\bdentro\b', r'\badentro\b', r'\bahí\b', r'\bahi\b',
+                            r'\baquí\b', r'\baqui\b', r'\ballí\b', r'\balli\b', r'\bque\b', r'\ben\b',
+                            r'\bpara\b', r'\bde\b', r'\bhace\b', r'\bhaz\b', r'\bhacer\b', r'\bhay\b',
+                            r'\btiene\b', r'\bcontiene\b', r'\bdonde\b', r'\bdel\b', r'\bal\b', r'\bcomo\b'
+                        ]
+                        for stop_w in stop_words_list:
+                            raw_folder_name = re.split(stop_w, raw_folder_name, flags=re.IGNORECASE)[0]
+                        folder_name = raw_folder_name.strip().rstrip('.').strip()
+                
+                if folder_name:
+                    logging.info(f"Detectada petición de video desde carpeta (upload): {folder_name}")
+                    yield f"🎬 Entendido. Voy a crear un video con las fotos y el audio de la carpeta **{folder_name}**. Puedes ver el progreso en la barra lateral izquierda.\n\n"
+                    
+                    def run_video_task():
+                        try:
+                            result = tools.create_video_from_folder(folder_name, progress_callback)
+                            if "Error" in result:
+                                progress_callback(0, f"Error: {result}", status="error")
+                            else:
+                                progress_callback(100, "Video creado correctamente.", status="completed", filename=result)
+                        except Exception as e:
+                            logging.error(f"Error en tarea de video bg: {e}")
+                            progress_callback(0, f"Error critico: {str(e)}", status="error")
+                    
+                    import threading
+                    threading.Thread(target=run_video_task, daemon=True).start()
+                    return
 
         # Detección de intención de búsqueda y extracción de URLs
         if prompt and tool_settings.get("web_search", True):

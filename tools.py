@@ -515,15 +515,15 @@ def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
         fade_in_duration = 0.6
         fade_out_duration = 0.8
 
-        # Importante: evitamos fade out visual para no producir pantalla negra al final.
-        # Dejamos solo fade in en video y fade in/out en audio (out al final real con areverse).
+        # Añadimos fade in y fade out visual al video
         video_filter = (
             f"fps=30,format=yuv420p,"
-            f"fade=t=in:st=0:d={fade_in_duration:.2f}"
+            f"fade=t=in:st=0:d={fade_in_duration:.2f},"
+            f"fade=t=out:st={output_duration - fade_out_duration:.2f}:d={fade_out_duration:.2f}"
         )
         audio_filter = (
             f"afade=t=in:st=0:d={fade_in_duration:.2f},"
-            f"areverse,afade=t=in:st=0:d={fade_out_duration:.2f},areverse"
+            f"afade=t=out:st={output_duration - fade_out_duration:.2f}:d={fade_out_duration:.2f}"
         )
 
         cmd = [
@@ -537,7 +537,7 @@ def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
             "-af", audio_filter,
             "-c:v", "libx264",
             "-c:a", "aac",
-            "-shortest",
+            "-t", f"{output_duration:.2f}",
             str(output_path.resolve())
         ]
 

@@ -51,7 +51,7 @@ echo.
 
 REM Esperar a que los servidores se inicialicen y luego abrir el navegador
 timeout /t 3 >nul 2>&1
-start http://127.0.0.1:3000
+start http://localhost:3000
 
 echo.
 echo ========================================
@@ -60,4 +60,4 @@ echo ========================================
 echo.
 
 REM Mantener la ventana abierta para ver los logs
-waitfor /T 9999999999 PAUSE >nul 2>&1
+waitfor /T 9999999999 PAUSE >nul 2>&1
