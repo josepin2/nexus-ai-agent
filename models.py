@@ -306,7 +306,7 @@ class OllamaManager:
             urls_in_prompt = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', prompt)
             
             if not urls_in_prompt:
-                search_keywords = ['busca', 'búscame', 'buscar', 'búsqueda', 'noticia', 'noticias', 'internet', 'web', 'investiga', 'últimos días', 'qué ha pasado']
+                search_keywords = ['busca', 'búscame', 'buscar', 'búsqueda', 'noticia', 'noticias', 'internet', 'investiga', 'últimos días', 'qué ha pasado']
                 prompt_lower = prompt.lower()
                 is_search_request = False
                 for kw in search_keywords:
@@ -687,7 +687,7 @@ class OllamaManager:
             urls_in_prompt = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', prompt)
             
             if not urls_in_prompt:
-                search_keywords = ['busca', 'búscame', 'buscar', 'búsqueda', 'noticia', 'noticias', 'internet', 'web', 'investiga', 'últimos días', 'qué ha pasado']
+                search_keywords = ['busca', 'búscame', 'buscar', 'búsqueda', 'noticia', 'noticias', 'internet', 'investiga', 'últimos días', 'qué ha pasado']
                 prompt_lower = prompt.lower()
                 is_search_request = False
                 for kw in search_keywords:
