@@ -149,6 +149,19 @@ class OllamaManager:
             yield "Error: No se ha seleccionado ningún modelo."
             return
 
+        # Verificar si hay una automatización guardada con éxito para este prompt
+        if prompt and tool_settings.get("automator", True):
+            saved_code = tools.find_saved_script(prompt)
+            if saved_code:
+                yield "💡 **Reutilizando automatización guardada con éxito para esta tarea...**\n\n"
+                result = tools.execute_python_code(saved_code, prompt=prompt)
+                if result["success"]:
+                    display = result["stdout"] or "El script se ejecutó correctamente."
+                    yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"
+                    return
+                else:
+                    yield "⚠️ El script guardado falló. Reintentando y regenerando con el modelo de IA...\n\n"
+
         # Detectar descargas o resúmenes de YouTube
         if prompt and tool_settings.get("youtube", True):
             # Regex mejorada para limpiar puntos finales o caracteres raros al final de la URL
@@ -478,7 +491,7 @@ class OllamaManager:
                     if tool_settings.get("automator", True):
                         python_blocks = re.findall(r'<run_python>(.*?)</run_python>', full_response_text, flags=re.IGNORECASE | re.DOTALL)
                         for code_block in python_blocks:
-                            result = tools.execute_python_code(code_block)
+                            result = tools.execute_python_code(code_block, prompt=prompt)
                             if result["success"]:
                                 display = result["stdout"] or "El script se ejecutó correctamente."
                                 yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"
@@ -537,6 +550,19 @@ class OllamaManager:
         if not model:
             yield "Error: No se ha seleccionado ningún modelo."
             return
+
+        # Verificar si hay una automatización guardada con éxito para este prompt
+        if prompt and tool_settings.get("automator", True):
+            saved_code = tools.find_saved_script(prompt)
+            if saved_code:
+                yield "💡 **Reutilizando automatización guardada con éxito para esta tarea...**\n\n"
+                result = tools.execute_python_code(saved_code, prompt=prompt)
+                if result["success"]:
+                    display = result["stdout"] or "El script se ejecutó correctamente."
+                    yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"
+                    return
+                else:
+                    yield "⚠️ El script guardado falló. Reintentando y regenerando con el modelo de IA...\n\n"
 
         # Detectar descargas o resúmenes de YouTube
         if prompt and tool_settings.get("youtube", True):
@@ -875,7 +901,7 @@ class OllamaManager:
                     if tool_settings.get("automator", True):
                         python_blocks = re.findall(r'<run_python>(.*?)</run_python>', full_response_text, flags=re.IGNORECASE | re.DOTALL)
                         for code_block in python_blocks:
-                            result = tools.execute_python_code(code_block)
+                            result = tools.execute_python_code(code_block, prompt=prompt)
                             if result["success"]:
                                 display = result["stdout"] or "El script se ejecutó correctamente."
                                 yield f"\n\n✅ **Tarea completada con éxito.**\n```\n{display}\n```"

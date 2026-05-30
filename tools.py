@@ -38,6 +38,14 @@ def _init_db():
                     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS successful_scripts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    intent_key TEXT UNIQUE NOT NULL,
+                    code TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
             conn.commit()
     except Exception as e:
         logging.error(f"Error inicializando BD: {e}")
@@ -94,6 +102,59 @@ def clear_user_memory() -> bool:
     except Exception as e:
         logging.error(f"Error borrando memoria DB: {e}")
         return False
+
+def find_saved_script(prompt: str) -> str:
+    """Busca si hay un script guardado que coincida con las palabras clave del prompt."""
+    try:
+        prompt_clean = prompt.lower().strip()
+        intents = {
+            "limpiar_temporales": ["limpia", "temporales", "borra", "temp", "archivo", "basura", "limpieza"],
+            "recursos_sistema": ["recursos", "sistema", "cpu", "ram", "memoria", "procesador", "disco", "pantalla", "tarjeta", "grafica"],
+        }
+        matched_intent = None
+        for intent, keywords in intents.items():
+            matches = sum(1 for kw in keywords if kw in prompt_clean)
+            if matches >= 2 or (intent == "limpiar_temporales" and any(x in prompt_clean for x in ["temporal", "temporales"])):
+                matched_intent = intent
+                break
+        if not matched_intent:
+            return None
+        with sqlite3.connect(DB_FILE) as conn:
+            c = conn.cursor()
+            c.execute('SELECT code FROM successful_scripts WHERE intent_key = ?', (matched_intent,))
+            row = c.fetchone()
+            if row:
+                return row[0]
+    except Exception as e:
+        logging.error(f"Error buscando script guardado: {e}")
+    return None
+
+def save_successful_script(prompt: str, code: str):
+    """Guarda un script que se ejecutó correctamente si coincide con un intent conocido."""
+    try:
+        prompt_clean = prompt.lower().strip()
+        intents = {
+            "limpiar_temporales": ["limpia", "temporales", "borra", "temp", "archivo", "basura", "limpieza"],
+            "recursos_sistema": ["recursos", "sistema", "cpu", "ram", "memoria", "procesador", "disco", "pantalla", "tarjeta", "grafica"],
+        }
+        matched_intent = None
+        for intent, keywords in intents.items():
+            matches = sum(1 for kw in keywords if kw in prompt_clean)
+            if matches >= 2 or (intent == "limpiar_temporales" and any(x in prompt_clean for x in ["temporal", "temporales"])):
+                matched_intent = intent
+                break
+        if matched_intent:
+            with sqlite3.connect(DB_FILE) as conn:
+                c = conn.cursor()
+                c.execute('''
+                    INSERT INTO successful_scripts (intent_key, code)
+                    VALUES (?, ?)
+                    ON CONFLICT(intent_key) DO UPDATE SET code = excluded.code
+                ''', (matched_intent, code))
+                conn.commit()
+                logging.info(f"Script guardado con éxito para el intent: {matched_intent}")
+    except Exception as e:
+        logging.error(f"Error guardando script exitoso: {e}")
 
 def extract_url_content(url: str) -> str:
     """Extrae el contenido principal de una URL de forma limpia."""
@@ -588,7 +649,7 @@ def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-def execute_python_code(code: str) -> dict:
+def execute_python_code(code: str, prompt: str = None) -> dict:
     """Ejecuta código Python localmente de forma segura capturando la salida.
     
     Returns:
@@ -604,6 +665,17 @@ def execute_python_code(code: str) -> dict:
         if code.endswith("```"):
             code = code[:-3]
         code = code.strip()
+
+        # Linter de sintaxis local antes de ejecutar
+        try:
+            import ast
+            ast.parse(code)
+        except SyntaxError as se:
+            return {
+                "stdout": "",
+                "stderr": f"Error de Sintaxis detectado por Linter local en linea {se.lineno}: {se.msg}\nCodigo problemático: {se.text}",
+                "success": False
+            }
 
         # Ejecutar en un subproceso con timeout de 60s
         import os
@@ -624,6 +696,9 @@ def execute_python_code(code: str) -> dict:
         stderr = result.stderr.strip() if result.stderr else ""
         success = result.returncode == 0
         
+        if success and prompt:
+            save_successful_script(prompt, code)
+            
         return {
             "stdout": stdout,
             "stderr": stderr,
