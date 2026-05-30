@@ -489,9 +489,6 @@ def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
             # Repetir última imagen para que ffmpeg respete su duración
             f.write(f"file '{images[-1].resolve().as_posix()}'\n")
 
-        if progress_callback:
-            progress_callback(60, "Renderizando video con audio...")
-
         # Duración estimada del video (4s por imagen)
         video_duration = float(len(images) * 4)
 
@@ -541,7 +538,36 @@ def create_video_from_folder(folder_input: str, progress_callback=None) -> str:
             str(output_path.resolve())
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        # Hilo para simular avance suave durante la codificación del video
+        import threading
+        import time
+
+        stop_progress = False
+        current_progress = 40.0
+
+        def update_smooth_progress():
+            nonlocal current_progress
+            while not stop_progress and current_progress < 95.0:
+                time.sleep(0.3)
+                if stop_progress:
+                    break
+                # Incremento decreciente a medida que nos acercamos al 95%
+                inc = (95.0 - current_progress) * 0.08
+                current_progress += max(inc, 0.3)
+                if progress_callback:
+                    progress_callback(int(current_progress), "Renderizando video y mezclando audio con FFmpeg...")
+
+        if progress_callback:
+            progress_callback(35, "Iniciando renderizado con FFmpeg...")
+
+        progress_thread = threading.Thread(target=update_smooth_progress, daemon=True)
+        progress_thread.start()
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        finally:
+            stop_progress = True
+            progress_thread.join(timeout=1.0)
 
         try:
             if list_file.exists():
